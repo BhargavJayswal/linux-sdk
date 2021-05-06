@@ -1,0 +1,89 @@
+#!/bin/bash
+#***********************************************************************
+# Program : web_app_en_merge  
+#     Generage App English language javascript file by merge English language
+# javascript files one by one which are create by web_language. See web_-
+# language for more imformation.
+# History :
+# 2015/09/15    weiyuying   first release
+# 
+#***********************************************************************
+
+if [ -z ${PKG_BUILD_DIR+x} ]; then 
+	echo "PKG_BUILD_DIR is unset";
+	exit 1
+fi
+
+WORK_DIR=${PKG_BUILD_DIR}/uci
+mkdir -p ${WORK_DIR}
+
+LANGUAGE_DIR=${WORK_DIR}/language
+PROTOHOME_XML_PATH=${WORK_DIR}/status.xml
+PROTONAVIGATION_XML_PATH=${WORK_DIR}/protonavigation.xml
+PROTOCONFIG_XML_PATH=${WORK_DIR}/protoconfig.xml
+PROTOSTATUS_XML_PATH=${WORK_DIR}/protostatus.xml
+if [ -e ${PKG_BUILD_DIR}/files ]; then
+CFG_DIR=${PKG_BUILD_DIR}/files
+else
+CFG_DIR=${PKG_BUILD_DIR}
+fi
+
+if [ ! -e ${LANGUAGE_DIR} ] ; then
+    mkdir ${LANGUAGE_DIR}
+fi
+
+HAS_UCI_FILE=FALSE
+
+#****************************************************************************************************************
+# generate protonavigation.xml
+if [ -e ${CFG_DIR}/navigation.xml ] ; then
+	HAS_UCI_FILE=TRUE
+    echo "<?xml version=\"1.0\"?>" > ${PROTONAVIGATION_XML_PATH}
+    echo "<nav_xml VERSION=\"1.0.0\">" >> ${PROTONAVIGATION_XML_PATH}
+    cat ${CFG_DIR}/navigation.xml >> ${PROTONAVIGATION_XML_PATH}
+    echo >> ${PROTONAVIGATION_XML_PATH}  
+    echo "</nav_xml>" >> ${PROTONAVIGATION_XML_PATH}
+fi
+
+# generate protoconfig.xml
+if [ -e ${CFG_DIR}/uci.xml ] ; then
+	HAS_UCI_FILE=TRUE
+    echo "<?xml version=\"1.0\"?>" > ${PROTOCONFIG_XML_PATH}
+    echo "<config_xml VERSION=\"1.0.0\">" >> ${PROTOCONFIG_XML_PATH}
+    cat ${CFG_DIR}/uci.xml >> ${PROTOCONFIG_XML_PATH}
+    echo >> ${PROTOCONFIG_XML_PATH}            
+    echo "</config_xml>" >> ${PROTOCONFIG_XML_PATH}
+fi
+
+# generate protostatus.xml
+if [ -e ${CFG_DIR}/usi.xml ] ; then
+	HAS_UCI_FILE=TRUE
+    echo "<?xml version=\"1.0\"?>" > ${PROTOSTATUS_XML_PATH}
+    echo "<status_xml VERSION=\"1.0.0\">" >> ${PROTOSTATUS_XML_PATH}
+    cat ${CFG_DIR}/usi.xml >> ${PROTOSTATUS_XML_PATH}
+    echo >> ${PROTOSTATUS_XML_PATH}
+    echo "</status_xml>" >> ${PROTOSTATUS_XML_PATH}
+fi
+
+# uci files not found, just exit
+if [ ${HAS_UCI_FILE} = "FALSE" ]; then
+	exit 0
+fi
+
+#****************************************************************************************************************
+#Generate App language javascript according to XML file.
+cd ${WORK_DIR};${TOPDIR}/staging_dir/host/bin/web_language generate $PROTOCONFIG_XML_PATH $PROTOSTATUS_XML_PATH $PROTONAVIGATION_XML_PATH $PROTOHOME_XML_PATH
+
+if [ "$?" -ne 0 ] ; then
+    exit -1;
+fi
+
+#merge language files
+cat ${LANGUAGE_DIR}/*_english.js >temp_language.js
+awk ' !x[$0]++' temp_language.js > english.js
+
+#clear temporary files
+rm temp_language.js -rf
+rm $LANGUAGE_DIR -rf
+
+exit 0
